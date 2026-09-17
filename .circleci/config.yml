@@ -1,0 +1,28 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - checkout
+      # Pinned to 1.24 rather than `--version-file go.mod`: go.mod declares
+      # `go 1.15` (the minimum supported version), but dependencies need newer
+      # toolchains -- mousetrap v1.1.0 declares `go 1.18` -- so building with
+      # 1.15 would fail.
+      - run:
+          name: Set up Go
+          command: circleci run circleci/setup-go@0.0.11-94c150b -- install --version 1.24
+      # mod-download restores/saves the module cache (GOMODCACHE) around
+      # `go mod download` itself, so no explicit restore_cache/save_cache here.
+      - run:
+          name: Download modules
+          command: circleci run circleci/setup-go@0.0.11-94c150b -- mod-download --checksum '{{ checksum "go.sum" }}'
+      - run:
+          name: Test
+          command: circleci run circleci/setup-go@0.0.11-94c150b -- test --project-path .
+
+workflows:
+  test:
+    jobs:
+      - test
